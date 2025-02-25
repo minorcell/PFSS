@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>文件上传示例</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .upload-container {
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .upload-form {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      .upload-btn {
+        padding: 10px 20px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .upload-btn:hover {
+        background-color: #45a049;
+      }
+      .del-btn {
+        padding: 5px 20px;
+        background-color: #bd3f39;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .del-btn:hover {
+        background-color: red;
+      }
+      .preview-container {
+        margin-top: 20px;
+      }
+      .preview-image {
+        max-width: 100%;
+        max-height: 400px;
+        margin-top: 10px;
+      }
+      .result {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 4px;
+      }
+      .success {
+        background-color: #dff0d8;
+        color: #3c763d;
+      }
+      .error {
+        background-color: #f2dede;
+        color: #a94442;
+      }
+      .file-list {
+        margin-top: 30px;
+        border-top: 1px solid #ddd;
+        padding-top: 20px;
+      }
+      .file-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        background-color: #f8f9fa;
+        margin-bottom: 10px;
+        border-radius: 4px;
+      }
+      .file-name {
+        flex-grow: 1;
+        margin-right: 10px;
+      }
+      .download-btn {
+        padding: 6px 12px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      .download-btn:hover {
+        background-color: #0056b3;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="upload-container">
+      <h1>文件上传</h1>
+      <div class="upload-form">
+        <input type="file" id="fileInput" />
+        <button class="upload-btn" onclick="uploadFile()">上传</button>
+      </div>
+      <div class="preview-container">
+        <div id="result"></div>
+        <div id="preview"></div>
+      </div>
+      <div class="file-list">
+        <h2>文件列表</h2>
+        <div id="fileList"></div>
+      </div>
+    </div>
+
+    <script>
+      // 页面加载时获取文件列表
+      window.onload = fetchFileList;
+
+      // 获取文件列表
+      async function fetchFileList() {
+        try {
+          const response = await fetch("http://localhost:8080/files");
+          const data = await response.json();
+
+          if (response.ok) {
+            displayFileList(data.files);
+          } else {
+            showResult("获取文件列表失败", false);
+          }
+        } catch (error) {
+          showResult("获取文件列表时发生错误", false);
+          console.error("Error:", error);
+        }
+      }
+
+      // 显示文件列表
+      function displayFileList(files) {
+        const fileListDiv = document.getElementById("fileList");
+        fileListDiv.innerHTML = "";
+
+        files.forEach((file) => {
+          const fileItem = document.createElement("div");
+          fileItem.className = "file-item";
+          fileItem.innerHTML = `
+                    <span class="file-name">${file.name}</span>
+                    <div class="button-group">
+                        <a href="http://localhost:8080${file.url}" class="download-btn" download>下载</a>
+                        <button class="del-btn" onclick="deleteFile('${file.name}')">删除</button>
+                    </div>
+                `;
+          fileListDiv.appendChild(fileItem);
+        });
+      }
+
+      async function deleteFile(filename) {
+        if (!confirm("确定要删除这个文件吗？")) {
+          return;
+        }
+
+        try {
+          const response = await fetch(
+            `http://localhost:8080/files/${encodeURIComponent(filename)}`,
+            {
+              method: "DELETE",
+            }
+          );
+
+          if (response.ok) {
+            showResult("文件删除成功", true);
+            fetchFileList(); // 刷新文件列表
+          } else {
+            const data = await response.json();
+            showResult(data.error || "删除失败", false);
+          }
+        } catch (error) {
+          showResult("删除过程中发生错误", false);
+          console.error("Error:", error);
+        }
+      }
+
+      async function uploadFile() {
+        const fileInput = document.getElementById("fileInput");
+        const resultDiv = document.getElementById("result");
+        const previewDiv = document.getElementById("preview");
+
+        if (!fileInput.files.length) {
+          showResult("请选择要上传的文件", false);
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+
+        try {
+          const response = await fetch("http://localhost:8080/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            showResult(
+              `文件上传成功！访问地址：<a href="${data.url}" target="_blank">${data.url}</a>`,
+              true
+            );
+
+            // 如果是图片，显示预览
+            const file = fileInput.files[0];
+            if (file.type.startsWith("image/")) {
+              previewDiv.innerHTML = `<img src="${data.url}" class="preview-image" alt="预览图片">`;
+            } else {
+              previewDiv.innerHTML = "";
+            }
+
+            // 刷新文件列表
+            fetchFileList();
+          } else {
+            showResult(data.error || "上传失败", false);
+          }
+        } catch (error) {
+          showResult("上传过程中发生错误", false);
+          console.error("Error:", error);
+        }
+      }
+
+      function showResult(message, isSuccess) {
+        const resultDiv = document.getElementById("result");
+        resultDiv.className = `result ${isSuccess ? "success" : "error"}`;
+        resultDiv.innerHTML = message;
+      }
+    </script>
+  </body>
+</html>
