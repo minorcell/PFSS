@@ -1,83 +1,96 @@
-# 私人文件存储服务
+# 私人文件存储服务 (PFSS)
 
-私人文件存储服务是一个可以单独运行的文件存储服务，可以用于存储和管理个人的文件，主要面向开发者或者中小企业，可独立部署。旨在为小型企业或者开发者提供一个安全的、可集中管理文件的系统。它包含文件的上传、预览、下载、删除等功能。
+## 简介
 
-**注意**：PFSS 是一个可以独立部署在服务器的系统，主要面向开发者群体。
+私人文件存储服务（PFSS）是一个轻量级的文件存储和管理系统，专为开发者和中小企业设计。它提供安全可靠的文件存储、管理和访问功能，支持独立部署。
 
-## 功能
+## 系统架构
 
-- 文件上传
-- 文件预览
+```mermaid
+graph TD
+    A[客户端] --> B[API 网关]
+    B --> C[认证模块]
+    B --> D[文件模块]
+    B --> E[用户模块]
+    B --> F[桶模块]
+    D --> G[存储层]
+    F --> G
+```
+
+## 核心功能
+
+### 1. 文件管理
+- 文件上传（支持多种命名策略）
+- 文件预览（Web端直接预览）
 - 文件下载
-- 桶管理
-- 文件管理
+- 文件删除和修改
+
+### 2. 桶管理
+- 自定义存储路径
+- 桶级别的访问控制
+- 文件组织和分类
+
+### 3. 安全特性
+- 私有上传（基于密钥）
+- 可配置的公开访问
+- 用户权限管理
+
+## API 示例
 
 ### 文件上传
-
-文件上传是 PFSS 的输入模块之一，用户（开发者）可以通过调用 API 接口来实现文件的上传。它还支持定制的文件名、文件夹路径等参数。默认情况下，文件会被存储在服务器的`/files`目录下，返回计算后的文件路径，且文件名会通过 SHA256 哈希算法进行处理，以确保文件的唯一性。如果用户选择通过一些格式自定义（时间戳、文件名等）的文件名、文件夹路径等参数，PFSS 会根据用户的选择来存储文件。
-
-### 文件预览
-
-文件预览是 PFSS 的输出模块之一，在 Web 端可以通过使用链接的方式直接预览文件。
+```bash
+curl -X POST 'http://localhost:8080/api/v1/files/upload' \
+  -H 'Authorization: Bearer YOUR_SECRET_KEY' \
+  -F 'file=@/path/to/file.jpg' \
+  -F 'customNameType=time' \
+  -F 'customFolder=images'
+```
 
 ### 文件下载
-
-文件下载是 PFSS 的输出模块之一，用户（开发者）可以通过调用 API 接口来实现文件的下载。
-
-### 文件管理
-
-PFSS 提供一些接口，方便用户获取文件列表、支持对文件的删除、修改、查找等操作。除此之外，PFSS 会提供一个默认的文件管理界面，使用者可独立部署，以实现文件的管理。
-
-### 桶管理
-
-在 PFSS 中，文件是默认存储在`/files`目录下的，但是 PFSS 也支持自定义的文件夹路径。使用者可以在上传文件时，通过自行设置一个文件夹参数来指定文件的存储位置。
-
-## 基本概念
-
-- 私有上传：文件的上传仅仅支持私有上传，不支持公开上传，主要通过 key 机制管理访问权限
-- 公开访问：所有上传的文件默认都是公开访问的
-- 文件：用户上传的文件
-- 桶：用户自定义的文件夹路径
-
-## 信息结构
-
-### 私有上传
-
-```typescript
-interface PrivateUpload {
-  secretKey: string;
-  file: File;
-  customNameType?: "time" | "filename" | "hash";
-  customFolder?: string;
-}
+```bash
+curl -X GET 'http://localhost:8080/api/v1/files/download/{fileId}' \
 ```
 
-### 公开访问
+## 错误处理
 
-```html
-<a href="filePath">文件名</a>
-```
+| 状态码 | 说明 | 处理建议 |
+|--------|------|----------|
+| 400 | 请求参数错误 | 检查请求参数 |
+| 401 | 未授权 | 检查认证信息 |
+| 403 | 无权限 | 确认操作权限 |
+| 404 | 资源不存在 | 检查资源ID |
+| 413 | 文件过大 | 检查文件大小限制 |
 
-## 文件
+## 数据结构
 
+### 文件
 ```typescript
 interface File {
-  id: string;
-  name: string;
-  path: string;
-  bucketId: string;
-  size: number;
-  type: string;
-  lastModified: number;
+  id: string;         // 文件唯一标识
+  name: string;       // 文件名
+  path: string;       // 存储路径
+  bucketId: string;   // 所属桶ID
+  size: number;       // 文件大小(字节)
+  type: string;       // MIME类型
+  lastModified: number; // 最后修改时间
+  hash: string;       // 文件哈希值
 }
 ```
 
 ### 桶
-
 ```typescript
 interface Bucket {
-  id: string;
-  name: string;
-  fileIds: File.id[];
+  id: string;         // 桶唯一标识
+  name: string;       // 桶名称
+  fileIds: string[];  // 文件ID列表
+  createdAt: number;  // 创建时间
+  owner: string;      // 所有者ID
 }
 ```
+
+## 限制说明
+
+- 最大文件大小：100MB
+- 支持的文件类型：所有常见文件类型
+- 桶命名规则：小写字母、数字、中划线，3-63字符
+- API速率限制：100次/分钟
