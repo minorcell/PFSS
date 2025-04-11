@@ -22,7 +22,18 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 	}
 }
 
-// ListUsers handles the user list request
+// ListUsers godoc
+// @Summary List users
+// @Description Get a list of users with pagination
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param page query int false "Page number"
+// @Param page_size query int false "Page size"
+// @Success 200 {object} model.UserListResponse
+// @Failure 400,401,403 {object} util.ErrorResponse
+// @Router /users [get]
 func (h *UserHandler) ListUsers(c *gin.Context) {
 	// Get pagination parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -54,7 +65,17 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 	})
 }
 
-// GetUser handles the get user request
+// GetUser godoc
+// @Summary Get user details
+// @Description Get details of a specific user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "User ID"
+// @Success 200 {object} model.UserResponse
+// @Failure 400,401,403,404 {object} util.ErrorResponse
+// @Router /users/{id} [get]
 func (h *UserHandler) GetUser(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -91,7 +112,18 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	})
 }
 
-// UpdateUser handles the update user request
+// UpdateUser godoc
+// @Summary Update user
+// @Description Update user information
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "User ID"
+// @Param request body model.UserUpdateRequest true "User update request"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400,401,403,404 {object} util.ErrorResponse
+// @Router /users/{id} [put]
 func (h *UserHandler) UpdateUser(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -138,7 +170,17 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
 }
 
-// DeleteUser handles the delete user request
+// DeleteUser godoc
+// @Summary Delete user
+// @Description Delete a user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "User ID"
+// @Success 204 "No Content"
+// @Failure 400,401,403,404 {object} util.ErrorResponse
+// @Router /users/{id} [delete]
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {

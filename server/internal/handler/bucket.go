@@ -22,7 +22,17 @@ func NewBucketHandler(bucketService *service.BucketService) *BucketHandler {
 	}
 }
 
-// CreateBucket handles bucket creation
+// CreateBucket godoc
+// @Summary Create bucket
+// @Description Create a new bucket
+// @Tags buckets
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param request body model.BucketCreateRequest true "Bucket create request"
+// @Success 201 {object} model.BucketResponse
+// @Failure 400,401,403 {object} util.ErrorResponse
+// @Router /buckets [post]
 func (h *BucketHandler) CreateBucket(c *gin.Context) {
 	var req model.BucketCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -46,7 +56,18 @@ func (h *BucketHandler) CreateBucket(c *gin.Context) {
 	c.JSON(http.StatusCreated, bucket)
 }
 
-// ListBuckets handles bucket listing
+// ListBuckets godoc
+// @Summary List buckets
+// @Description Get a list of buckets with pagination
+// @Tags buckets
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param page query int false "Page number"
+// @Param page_size query int false "Page size"
+// @Success 200 {object} model.BucketListResponse
+// @Failure 400,401,403 {object} util.ErrorResponse
+// @Router /buckets [get]
 func (h *BucketHandler) ListBuckets(c *gin.Context) {
 	// Get pagination parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -80,7 +101,17 @@ func (h *BucketHandler) ListBuckets(c *gin.Context) {
 	})
 }
 
-// GetBucket handles getting a single bucket
+// GetBucket godoc
+// @Summary Get bucket details
+// @Description Get details of a specific bucket
+// @Tags buckets
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "Bucket ID"
+// @Success 200 {object} model.BucketResponse
+// @Failure 400,401,403,404 {object} util.ErrorResponse
+// @Router /buckets/{id} [get]
 func (h *BucketHandler) GetBucket(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -118,7 +149,18 @@ func (h *BucketHandler) GetBucket(c *gin.Context) {
 	})
 }
 
-// UpdateBucket handles bucket updates
+// UpdateBucket godoc
+// @Summary Update bucket
+// @Description Update bucket information
+// @Tags buckets
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "Bucket ID"
+// @Param request body model.BucketUpdateRequest true "Bucket update request"
+// @Success 200 {object} model.BucketResponse
+// @Failure 400,401,403,404 {object} util.ErrorResponse
+// @Router /buckets/{id} [put]
 func (h *BucketHandler) UpdateBucket(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -152,7 +194,17 @@ func (h *BucketHandler) UpdateBucket(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Bucket updated successfully"})
 }
 
-// DeleteBucket handles bucket deletion
+// DeleteBucket godoc
+// @Summary Delete bucket
+// @Description Delete a bucket
+// @Tags buckets
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "Bucket ID"
+// @Success 204 "No Content"
+// @Failure 400,401,403,404 {object} util.ErrorResponse
+// @Router /buckets/{id} [delete]
 func (h *BucketHandler) DeleteBucket(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {

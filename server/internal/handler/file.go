@@ -22,7 +22,17 @@ func NewFileHandler(fileService *service.FileService) *FileHandler {
 	}
 }
 
-// CreateFile handles file creation
+// CreateFile godoc
+// @Summary Create file
+// @Description Create a new file
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param request body model.FileCreateRequest true "File create request"
+// @Success 201 {object} model.FileResponse
+// @Failure 400,401,403 {object} util.ErrorResponse
+// @Router /files [post]
 func (h *FileHandler) CreateFile(c *gin.Context) {
 	var req model.FileCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -48,7 +58,19 @@ func (h *FileHandler) CreateFile(c *gin.Context) {
 	c.JSON(http.StatusCreated, file)
 }
 
-// ListFiles handles file listing
+// ListFiles godoc
+// @Summary List files
+// @Description Get a list of files in a bucket with pagination
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param bucket_id path int true "Bucket ID"
+// @Param page query int false "Page number"
+// @Param page_size query int false "Page size"
+// @Success 200 {object} model.FileListResponse
+// @Failure 400,401,403 {object} util.ErrorResponse
+// @Router /files/bucket/{bucket_id} [get]
 func (h *FileHandler) ListFiles(c *gin.Context) {
 	bucketID, err := strconv.ParseUint(c.Param("bucket_id"), 10, 32)
 	if err != nil {
@@ -107,7 +129,17 @@ func (h *FileHandler) ListFiles(c *gin.Context) {
 	})
 }
 
-// GetFile handles getting a single file
+// GetFile godoc
+// @Summary Get file details
+// @Description Get details of a specific file
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "File ID"
+// @Success 200 {object} model.FileResponse
+// @Failure 400,401,403,404 {object} util.ErrorResponse
+// @Router /files/{id} [get]
 func (h *FileHandler) GetFile(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -143,7 +175,18 @@ func (h *FileHandler) GetFile(c *gin.Context) {
 	})
 }
 
-// UpdateFile handles file updates
+// UpdateFile godoc
+// @Summary Update file
+// @Description Update file information
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "File ID"
+// @Param request body model.FileUpdateRequest true "File update request"
+// @Success 200 {object} model.FileResponse
+// @Failure 400,401,403,404 {object} util.ErrorResponse
+// @Router /files/{id} [put]
 func (h *FileHandler) UpdateFile(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -177,7 +220,17 @@ func (h *FileHandler) UpdateFile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "File updated successfully"})
 }
 
-// DeleteFile handles file deletion
+// DeleteFile godoc
+// @Summary Delete file
+// @Description Delete a file
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "File ID"
+// @Success 204 "No Content"
+// @Failure 400,401,403,404 {object} util.ErrorResponse
+// @Router /files/{id} [delete]
 func (h *FileHandler) DeleteFile(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -202,7 +255,17 @@ func (h *FileHandler) DeleteFile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "File deleted successfully"})
 }
 
-// GetUploadURL handles getting a pre-signed upload URL
+// GetUploadURL godoc
+// @Summary Get upload URL
+// @Description Get a pre-signed URL for file upload
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "File ID"
+// @Success 200 {object} model.FileUploadResponse
+// @Failure 400,401,403,404 {object} util.ErrorResponse
+// @Router /files/{id}/upload [get]
 func (h *FileHandler) GetUploadURL(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -231,7 +294,17 @@ func (h *FileHandler) GetUploadURL(c *gin.Context) {
 	})
 }
 
-// GetDownloadURL handles getting a pre-signed download URL
+// GetDownloadURL godoc
+// @Summary Get download URL
+// @Description Get a pre-signed URL for file download
+// @Tags files
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "File ID"
+// @Success 200 {object} model.FileDownloadResponse
+// @Failure 400,401,403,404 {object} util.ErrorResponse
+// @Router /files/{id}/download [get]
 func (h *FileHandler) GetDownloadURL(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {

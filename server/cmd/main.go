@@ -7,6 +7,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	_ "github.com/minorcell/pfss/docs" // 导入 swagger docs
 	"github.com/minorcell/pfss/internal/handler"
 	"github.com/minorcell/pfss/internal/model"
 	"github.com/minorcell/pfss/internal/service"
@@ -15,6 +18,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// @title PFSS API
+// @version 1.0
+// @description Private File Storage System API documentation
+// @host localhost:8080
+// @BasePath /api/v1
+// @securityDefinitions.apikey Bearer
+// @in header
+// @name Authorization
 func main() {
 	// Load environment variables
 	if err := godotenv.Load(); err != nil {
@@ -75,6 +86,9 @@ func initializeRoutes(r *gin.Engine, db *gorm.DB) {
 	userHandler := handler.NewUserHandler(userService)
 	bucketHandler := handler.NewBucketHandler(bucketService)
 	fileHandler := handler.NewFileHandler(fileService)
+	// Swagger documentation
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{

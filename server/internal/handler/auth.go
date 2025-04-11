@@ -21,7 +21,16 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 	}
 }
 
-// Register handles user registration
+// Register godoc
+// @Summary Register a new user
+// @Description Register a new user with username and password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body model.RegisterRequest true "Register request"
+// @Success 201 {object} model.AuthResponse
+// @Failure 400 {object} util.ErrorResponse
+// @Router /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req model.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -57,7 +66,16 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, resp)
 }
 
-// Login handles user login
+// Login godoc
+// @Summary User login
+// @Description Login with username and password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body model.LoginRequest true "Login request"
+// @Success 200 {object} model.TokenResponse
+// @Failure 400,401 {object} util.ErrorResponse
+// @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req model.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -80,7 +98,17 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// ChangePassword handles password change requests
+// ChangePassword godoc
+// @Summary Change user password
+// @Description Change user password with old and new password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param request body model.ChangePasswordRequest true "Change password request"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400,401 {object} util.ErrorResponse
+// @Router /users/change-password [post]
 func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	var req struct {
 		CurrentPassword string `json:"current_password" binding:"required"`

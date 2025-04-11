@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"time"
 
 	"github.com/minorcell/pfss/internal/model"
 	"github.com/minorcell/pfss/pkg/util"
@@ -41,12 +40,13 @@ func (s *AuthService) Login(req *model.LoginRequest) (*model.AuthResponse, error
 	}
 
 	// Create response
+	tokenResp := &model.TokenResponse{
+		Token: token,
+	}
 	return &model.AuthResponse{
-		User: &user,
-		Token: &model.TokenResponse{
-			Token:     token,
-			ExpiresIn: int64(24 * time.Hour.Seconds()), // 24 hours
-		},
+		ID:       user.ID,
+		Username: user.Username,
+		Token:    tokenResp,
 	}, nil
 }
 
@@ -86,12 +86,13 @@ func (s *AuthService) Register(req *model.RegisterRequest) (*model.AuthResponse,
 	}
 
 	// Create response
+	tokenResp := &model.TokenResponse{
+		Token: token,
+	}
 	return &model.AuthResponse{
-		User: user,
-		Token: &model.TokenResponse{
-			Token:     token,
-			ExpiresIn: int64(24 * time.Hour.Seconds()), // 24 hours
-		},
+		ID:       user.ID,
+		Username: user.Username,
+		Token:    tokenResp,
 	}, nil
 }
 
