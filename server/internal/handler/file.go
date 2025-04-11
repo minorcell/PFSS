@@ -23,22 +23,38 @@ func NewFileHandler(fileService *service.FileService) *FileHandler {
 }
 
 // CreateFile godoc
-// @Summary Create file
-// @Description Create a new file
+// @Summary Upload file to bucket
+// @Description Upload a file to a specific bucket. The file will be stored in the 'upload/{bucket_name}' directory.
+// @Description The file name will be made unique by appending a timestamp.
 // @Tags files
-// @Accept json
+// @Accept multipart/form-data
 // @Produce json
 // @Security Bearer
-// @Param request body model.FileCreateRequest true "File create request"
-// @Success 201 {object} model.FileResponse
-// @Failure 400,401,403 {object} util.ErrorResponse
+// @Param bucket_id formData string true "Target bucket ID to upload the file to"
+// @Param file formData file true "The file to upload (supports any file type)"
+// @Success 201 {object} model.FileResponse "File uploaded successfully"
+// @Failure 400 {object} util.ErrorResponse "Invalid request, missing file, or invalid bucket ID"
+// @Failure 401 {object} util.ErrorResponse "Unauthorized - valid JWT token required"
+// @Failure 403 {object} util.ErrorResponse "Permission denied - requires write access to bucket"
+// @Failure 500 {object} util.ErrorResponse "Internal server error"
 // @Router /files [post]
 func (h *FileHandler) CreateFile(c *gin.Context) {
-	var req model.FileCreateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	// Get bucket ID from form
+	bucketID, err := strconv.ParseUint(c.PostForm("bucket_id"), 10, 32)
+	if err != nil {
 		util.SendError(c, &util.ErrorResponse{
 			Code:    http.StatusBadRequest,
-			Message: "Invalid request: " + err.Error(),
+			Message: "Invalid bucket ID",
+		})
+		return
+	}
+
+	// Get file from form
+	file, err := c.FormFile("file")
+	if err != nil {
+		util.SendError(c, &util.ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Message: "File is required",
 		})
 		return
 	}
@@ -46,7 +62,8 @@ func (h *FileHandler) CreateFile(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	isRoot := c.GetBool("is_root")
 
-	file, err := h.fileService.CreateFile(&req, userID, isRoot)
+	// Upload file and create record
+	fileInfo, err := h.fileService.UploadFile(uint(bucketID), file, userID, isRoot)
 	if err != nil {
 		util.SendError(c, &util.ErrorResponse{
 			Code:    http.StatusBadRequest,
@@ -55,7 +72,7 @@ func (h *FileHandler) CreateFile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, file)
+	c.JSON(http.StatusCreated, fileInfo)
 }
 
 // ListFiles godoc
@@ -175,51 +192,6 @@ func (h *FileHandler) GetFile(c *gin.Context) {
 	})
 }
 
-// UpdateFile godoc
-// @Summary Update file
-// @Description Update file information
-// @Tags files
-// @Accept json
-// @Produce json
-// @Security Bearer
-// @Param id path int true "File ID"
-// @Param request body model.FileUpdateRequest true "File update request"
-// @Success 200 {object} model.FileResponse
-// @Failure 400,401,403,404 {object} util.ErrorResponse
-// @Router /files/{id} [put]
-func (h *FileHandler) UpdateFile(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		util.SendError(c, &util.ErrorResponse{
-			Code:    http.StatusBadRequest,
-			Message: "Invalid file ID",
-		})
-		return
-	}
-
-	var req model.FileUpdateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		util.SendError(c, &util.ErrorResponse{
-			Code:    http.StatusBadRequest,
-			Message: "Invalid request: " + err.Error(),
-		})
-		return
-	}
-
-	userID := c.GetUint("user_id")
-	isRoot := c.GetBool("is_root")
-
-	if err := h.fileService.UpdateFile(uint(id), &req, userID, isRoot); err != nil {
-		util.SendError(c, &util.ErrorResponse{
-			Code:    http.StatusBadRequest,
-			Message: err.Error(),
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "File updated successfully"})
-}
-
 // DeleteFile godoc
 // @Summary Delete file
 // @Description Delete a file
@@ -253,83 +225,4 @@ func (h *FileHandler) DeleteFile(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "File deleted successfully"})
-}
-
-// GetUploadURL godoc
-// @Summary Get upload URL
-// @Description Get a pre-signed URL for file upload
-// @Tags files
-// @Accept json
-// @Produce json
-// @Security Bearer
-// @Param id path int true "File ID"
-// @Success 200 {object} model.FileUploadResponse
-// @Failure 400,401,403,404 {object} util.ErrorResponse
-// @Router /files/{id}/upload [get]
-func (h *FileHandler) GetUploadURL(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		util.SendError(c, &util.ErrorResponse{
-			Code:    http.StatusBadRequest,
-			Message: "Invalid file ID",
-		})
-		return
-	}
-
-	userID := c.GetUint("user_id")
-	isRoot := c.GetBool("is_root")
-
-	uploadURL, err := h.fileService.GetUploadURL(uint(id), userID, isRoot)
-	if err != nil {
-		util.SendError(c, &util.ErrorResponse{
-			Code:    http.StatusBadRequest,
-			Message: err.Error(),
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, model.FileUploadResponse{
-		File:      nil, // TODO: Add file details if needed
-		UploadURL: uploadURL,
-	})
-}
-
-// GetDownloadURL godoc
-// @Summary Get download URL
-// @Description Get a pre-signed URL for file download
-// @Tags files
-// @Accept json
-// @Produce json
-// @Security Bearer
-// @Param id path int true "File ID"
-// @Success 200 {object} model.FileDownloadResponse
-// @Failure 400,401,403,404 {object} util.ErrorResponse
-// @Router /files/{id}/download [get]
-func (h *FileHandler) GetDownloadURL(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		util.SendError(c, &util.ErrorResponse{
-			Code:    http.StatusBadRequest,
-			Message: "Invalid file ID",
-		})
-		return
-	}
-
-	userID := c.GetUint("user_id")
-	isRoot := c.GetBool("is_root")
-
-	downloadURL, expiresAt, err := h.fileService.GetDownloadURL(uint(id), userID, isRoot)
-	if err != nil {
-		util.SendError(c, &util.ErrorResponse{
-			Code:    http.StatusBadRequest,
-			Message: err.Error(),
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, model.FileDownloadResponse{
-		File:        nil, // TODO: Add file details if needed
-		DownloadURL: downloadURL,
-		ExpiresAt:   model.JSONTime(expiresAt),
-	})
 }

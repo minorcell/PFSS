@@ -7,13 +7,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 	_ "github.com/minorcell/pfss/docs" // 导入 swagger docs
 	"github.com/minorcell/pfss/internal/handler"
 	"github.com/minorcell/pfss/internal/model"
 	"github.com/minorcell/pfss/internal/service"
 	"github.com/minorcell/pfss/pkg/middleware"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -62,6 +62,9 @@ func main() {
 	// Initialize routes
 	initializeRoutes(r, db)
 
+	// Configure static file server for uploads
+	r.Static("/upload", "upload")
+
 	// Start server
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {
@@ -98,7 +101,7 @@ func initializeRoutes(r *gin.Engine, db *gorm.DB) {
 
 	// API v1 group
 	v1 := r.Group("/api/v1")
-	
+
 	// Public routes
 	auth := v1.Group("/auth")
 	{
@@ -115,10 +118,10 @@ func initializeRoutes(r *gin.Engine, db *gorm.DB) {
 			// Public user endpoints
 			users.GET("", userHandler.ListUsers)
 			users.GET("/:id", userHandler.GetUser)
-			
+
 			// Self-service endpoints
 			users.POST("/change-password", authHandler.ChangePassword)
-			
+
 			// Admin/Root only endpoints
 			users.PUT("/:id", middleware.RootRequired(), userHandler.UpdateUser)
 			users.DELETE("/:id", middleware.RootRequired(), userHandler.DeleteUser)
@@ -133,12 +136,7 @@ func initializeRoutes(r *gin.Engine, db *gorm.DB) {
 			files.POST("", fileHandler.CreateFile)
 			files.GET("/bucket/:bucket_id", fileHandler.ListFiles)
 			files.GET("/:id", fileHandler.GetFile)
-			files.PUT("/:id", fileHandler.UpdateFile)
 			files.DELETE("/:id", fileHandler.DeleteFile)
-
-			// File upload/download URLs
-			files.GET("/:id/upload", fileHandler.GetUploadURL)
-			files.GET("/:id/download", fileHandler.GetDownloadURL)
 		}
 
 		// Buckets routes

@@ -402,9 +402,9 @@
                         "Bearer": []
                     }
                 ],
-                "description": "Create a new file",
+                "description": "Upload a file to a specific bucket. The file will be stored in the 'upload/{bucket_name}' directory.\nThe file name will be made unique by appending a timestamp.",
                 "consumes": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
@@ -412,39 +412,50 @@
                 "tags": [
                     "files"
                 ],
-                "summary": "Create file",
+                "summary": "Upload file to bucket",
                 "parameters": [
                     {
-                        "description": "File create request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/model.FileCreateRequest"
-                        }
+                        "type": "string",
+                        "description": "Target bucket ID to upload the file to",
+                        "name": "bucket_id",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "The file to upload (supports any file type)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "201": {
-                        "description": "Created",
+                        "description": "File uploaded successfully",
                         "schema": {
                             "$ref": "#/definitions/model.FileResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request, missing file, or invalid bucket ID",
                         "schema": {
                             "$ref": "#/definitions/util.ErrorResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "Unauthorized - valid JWT token required",
                         "schema": {
                             "$ref": "#/definitions/util.ErrorResponse"
                         }
                     },
                     "403": {
-                        "description": "Forbidden",
+                        "description": "Permission denied - requires write access to bucket",
+                        "schema": {
+                            "$ref": "#/definitions/util.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/util.ErrorResponse"
                         }
@@ -1133,7 +1144,7 @@
                     "type": "integer"
                 },
                 "token": {
-                    "type": "string"
+                    "$ref": "#/definitions/model.TokenResponse"
                 },
                 "username": {
                     "type": "string"
@@ -1282,41 +1293,6 @@
                 }
             }
         },
-        "model.FileCreateRequest": {
-            "type": "object",
-            "required": [
-                "bucket_id",
-                "content_type",
-                "name",
-                "path",
-                "size"
-            ],
-            "properties": {
-                "bucket_id": {
-                    "type": "integer"
-                },
-                "content_type": {
-                    "type": "string"
-                },
-                "metadata": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "minLength": 1
-                },
-                "path": {
-                    "type": "string"
-                },
-                "size": {
-                    "type": "integer"
-                }
-            }
-        },
         "model.FileDownloadResponse": {
             "type": "object",
             "properties": {
@@ -1441,6 +1417,9 @@
                 "username"
             ],
             "properties": {
+                "is_root": {
+                    "type": "boolean"
+                },
                 "password": {
                     "type": "string"
                 },

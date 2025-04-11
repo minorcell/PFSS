@@ -2,6 +2,10 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"io"
+	"mime/multipart"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -15,6 +19,7 @@ import (
 type FileService struct {
 	db            *gorm.DB
 	bucketService *BucketService
+	storagePath   string
 }
 
 // NewFileService creates a new file service
@@ -22,6 +27,7 @@ func NewFileService(db *gorm.DB, bucketService *BucketService) *FileService {
 	return &FileService{
 		db:            db,
 		bucketService: bucketService,
+		storagePath:   "upload",
 	}
 }
 
@@ -222,4 +228,81 @@ func (s *FileService) GetDownloadURL(id uint, userID uint, isRoot bool) (string,
 	expiresAt := time.Now().Add(24 * time.Hour) // URL expires in 24 hours
 
 	return downloadURL, expiresAt, nil
+}
+
+// UploadFile handles file upload to a bucket
+func (s *FileService) UploadFile(bucketID uint, file *multipart.FileHeader, userID uint, isRoot bool) (*model.FileResponse, error) {
+	// Check bucket access
+	perm, err := s.bucketService.GetUserBucketPermission(bucketID, userID)
+	if err != nil || perm.Access == "read" {
+		return nil, errors.New("permission denied: requires write access")
+	}
+
+	// Get bucket info for path construction
+	bucket, err := s.bucketService.GetBucketByID(bucketID, userID, isRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create storage directory if not exists
+	bucketPath := path.Join(s.storagePath, bucket.Name)
+	if err := os.MkdirAll(bucketPath, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create storage directory: %v", err)
+	}
+
+	// Generate unique filename
+	ext := path.Ext(file.Filename)
+	fileName := strings.TrimSuffix(file.Filename, ext)
+	timestamp := time.Now().Format("20060102150405")
+	uniqueFileName := fmt.Sprintf("%s_%s%s", fileName, timestamp, ext)
+	filePath := path.Join(bucketPath, uniqueFileName)
+
+	// Save file to disk
+	src, err := file.Open()
+	if err != nil {
+		return nil, fmt.Errorf("failed to open uploaded file: %v", err)
+	}
+	defer src.Close()
+
+	dst, err := os.Create(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create destination file: %v", err)
+	}
+	defer dst.Close()
+
+	if _, err = io.Copy(dst, src); err != nil {
+		return nil, fmt.Errorf("failed to save file: %v", err)
+	}
+
+	// Create file record
+	fileRecord := &model.File{
+		BucketID:      bucketID,
+		Name:          file.Filename,
+		Path:          path.Join(bucket.Name, uniqueFileName),
+		Size:          file.Size,
+		ContentType:   file.Header.Get("Content-Type"),
+		CreatedBy:     userID,
+		UpdatedBy:     userID,
+		LastModified:  time.Now(),
+	}
+
+	if err := s.db.Create(fileRecord).Error; err != nil {
+		// Cleanup file if database insert fails
+		os.Remove(filePath)
+		return nil, fmt.Errorf("failed to create file record: %v", err)
+	}
+
+	// Generate response
+	response := &model.FileResponse{
+		ID:          fileRecord.ID,
+		Name:        fileRecord.Name,
+		Path:        fileRecord.Path,
+		BucketID:    fileRecord.BucketID,
+		Size:        fileRecord.Size,
+		ContentType: fileRecord.ContentType,
+		CreatedAt:   model.JSONTime(fileRecord.CreatedAt),
+		UpdatedAt:   model.JSONTime(fileRecord.UpdatedAt),
+	}
+
+	return response, nil
 }

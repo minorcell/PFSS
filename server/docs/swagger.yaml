@@ -5,7 +5,7 @@ definitions:
       id:
         type: integer
       token:
-        type: string
+        $ref: '#/definitions/model.TokenResponse'
       username:
         type: string
     type: object
@@ -104,31 +104,6 @@ definitions:
     - current_password
     - new_password
     type: object
-  model.FileCreateRequest:
-    properties:
-      bucket_id:
-        type: integer
-      content_type:
-        type: string
-      metadata:
-        additionalProperties:
-          type: string
-        type: object
-      name:
-        maxLength: 255
-        minLength: 1
-        type: string
-      path:
-        type: string
-      size:
-        type: integer
-    required:
-    - bucket_id
-    - content_type
-    - name
-    - path
-    - size
-    type: object
   model.FileDownloadResponse:
     properties:
       download_url:
@@ -208,6 +183,8 @@ definitions:
     type: object
   model.RegisterRequest:
     properties:
+      is_root:
+        type: boolean
       password:
         type: string
       username:
@@ -552,37 +529,47 @@ paths:
   /files:
     post:
       consumes:
-      - application/json
-      description: Create a new file
+      - multipart/form-data
+      description: |-
+        Upload a file to a specific bucket. The file will be stored in the 'upload/{bucket_name}' directory.
+        The file name will be made unique by appending a timestamp.
       parameters:
-      - description: File create request
-        in: body
-        name: request
+      - description: Target bucket ID to upload the file to
+        in: formData
+        name: bucket_id
         required: true
-        schema:
-          $ref: '#/definitions/model.FileCreateRequest'
+        type: string
+      - description: The file to upload (supports any file type)
+        in: formData
+        name: file
+        required: true
+        type: file
       produces:
       - application/json
       responses:
         "201":
-          description: Created
+          description: File uploaded successfully
           schema:
             $ref: '#/definitions/model.FileResponse'
         "400":
-          description: Bad Request
+          description: Invalid request, missing file, or invalid bucket ID
           schema:
             $ref: '#/definitions/util.ErrorResponse'
         "401":
-          description: Unauthorized
+          description: Unauthorized - valid JWT token required
           schema:
             $ref: '#/definitions/util.ErrorResponse'
         "403":
-          description: Forbidden
+          description: Permission denied - requires write access to bucket
+          schema:
+            $ref: '#/definitions/util.ErrorResponse'
+        "500":
+          description: Internal server error
           schema:
             $ref: '#/definitions/util.ErrorResponse'
       security:
       - Bearer: []
-      summary: Create file
+      summary: Upload file to bucket
       tags:
       - files
   /files/{id}:
