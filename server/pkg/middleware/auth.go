@@ -7,9 +7,10 @@ import (
 	"github.com/minorcell/pfss/pkg/util"
 )
 
-// AuthMiddleware validates JWT tokens and sets user information in the context
+// AuthMiddleware JWT认证中间件，验证Token并设置用户信息到上下文
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 从请求头获取Authorization字段
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			util.SendError(c, util.ErrUnauthorized)
@@ -17,7 +18,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Extract token from Bearer schema
+		// 从Bearer格式中提取Token
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			util.SendError(c, util.NewError(401, "Invalid authorization header format"))
@@ -25,7 +26,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Parse and validate token
+		// 解析并验证Token
 		claims, err := util.ParseToken(parts[1])
 		if err != nil {
 			util.SendError(c, util.NewError(401, "Invalid token: "+err.Error()))
@@ -33,7 +34,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Set user information in context
+		// 将用户信息设置到上下文
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("is_root", claims.IsRoot)
@@ -42,9 +43,10 @@ func AuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-// RootRequired ensures the user is a root user
+// RootRequired 验证用户是否为管理员
 func RootRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 从上下文中获取管理员标识
 		isRoot, exists := c.Get("is_root")
 		if !exists || !isRoot.(bool) {
 			util.SendError(c, util.ErrForbidden)
